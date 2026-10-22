@@ -1,0 +1,148 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Capacitive Variable Area Transducer</title>
+<script type="module"
+src="https://unpkg.com/@google/model-viewer/dist/model-viewer.min.js"></script>
+<style>
+*{box-sizing:border-box}
+body{margin:0;background:#eef5fb;color:#18334b;font-family:Arial,sans-serif}
+header{background:#123b62;color:white;text-align:center;padding:25px 15px}
+main{max-width:900px;margin:22px auto;padding:0 14px}
+.card{background:white;border-radius:16px;padding:22px;margin-bottom:18px;box-shadow:0 4px 16px #123b6215}
+h2{color:#15558a}
+button{border:0;border-radius:9px;padding:13px 18px;background:#1268a5;color:white;font-size:16px;cursor:pointer;margin:6px 4px 6px 0}
+button:hover{background:#0b4d7d}
+#diagram{height:260px;background:#edf6ff;border-radius:12px;position:relative;overflow:hidden}
+.plate{position:absolute;width:72%;height:100px;left:14%;border:3px solid #52748b;border-radius:5px}
+#fixed{top:48px;background:linear-gradient(135deg,#9bc9e7,#e5f5ff,#7daac9)}
+#moving{top:100px;background:linear-gradient(135deg,#f6d48b,#fff0c6,#dba441);border-color:#9c762c;opacity:.96}
+.diagram-label{position:absolute;bottom:12px;left:0;right:0;text-align:center;color:#385875;font-size:13px}
+input[type=range]{width:100%;accent-color:#1479be}
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin-top:16px}
+.stat{padding:14px;background:#edf6ff;border-radius:10px}
+.stat span{display:block;font-size:13px;color:#486078;margin-bottom:7px}
+.stat strong{font-size:22px;color:#12588c}
+.note{color:#486078;line-height:1.6}
+.formula{text-align:center;background:#123b62;color:white;border-radius:10px;padding:18px;font-size:23px}
+#arPanel{display:none}
+model-viewer{width:100%;height:430px;background:#edf6ff;border-radius:12px}
+footer{text-align:center;color:#587087;padding:22px}
+</style>
+</head>
+<body>
+<header>
+<h1>Capacitive Variable Area Transducer</h1>
+<p>Interactive 3D and Augmented Reality Lab Explorer</p>
+</header>
+
+<main>
+<section class="card">
+<h2>1. Interactive Working Animation</h2>
+<p class="note">Move the slider to change the overlapping area. The separation between the plates stays constant.</p>
+
+<div id="diagram">
+<div class="plate" id="fixed"></div>
+<div class="plate" id="moving"></div>
+<div class="diagram-label">Blue: fixed plate · Gold: sliding plate</div>
+</div>
+
+<p><b>Overlapping area: <span id="percent">50</span>%</b></p>
+<input id="slider" type="range" min="10" max="100" value="50">
+
+<div class="stats">
+<div class="stat"><span>Overlap area</span><strong id="area">50 cm²</strong></div>
+<div class="stat"><span>Calculated capacitance</span><strong id="cap">44.27 pF</strong></div>
+<div class="stat"><span>Plate separation</span><strong>1 mm</strong></div>
+</div>
+</section>
+
+<section class="card">
+<h2>2. Capacitor Formula</h2>
+<div class="formula">C = ε₀ εᵣ A / d</div>
+<p class="note">As the overlapping area A increases, capacitance increases. These ideal values assume air as the dielectric, a maximum overlap area of 100 cm², and a plate separation of 1 mm.</p>
+</section>
+
+<section class="card">
+<h2>3. View in Augmented Reality</h2>
+<p class="note">Open the real 3D model of the variable-area capacitor. On a compatible phone, use the AR button to place it in your surroundings.</p>
+<button id="openAR">Open 3D / AR Model</button>
+
+<div id="arPanel">
+<model-viewer
+id="capacitorModel"
+src="./capacitive-variable-area.glb"
+alt="Capacitive variable area transducer with partially overlapping blue and gold plates"
+ar
+ar-modes="webxr scene-viewer quick-look"
+camera-controls
+auto-rotate
+shadow-intensity="1"
+exposure="1"
+environment-image="neutral"
+>
+<button slot="ar-button">View in your space (AR)</button>
+</model-viewer>
+<p id="modelStatus" class="note">Loading the capacitive variable-area model…</p>
+<button id="closeAR">Close Model</button>
+</div>
+</section>
+
+<section class="card">
+<h2>4. Working Principle</h2>
+<p class="note">
+1. Two conductive plates form a capacitor.<br>
+2. One plate slides horizontally.<br>
+3. The overlapping area changes with the movement.<br>
+4. Greater overlap produces greater capacitance.<br>
+5. A measuring circuit can convert the capacitance change into a displacement-related electrical signal.
+</p>
+</section>
+</main>
+
+<footer>Sensors & Instrumentation · Capacitive Transducer Project</footer>
+
+<script>
+const slider = document.getElementById('slider');
+const moving = document.getElementById('moving');
+
+function update(){
+  const p = Number(slider.value);
+  document.getElementById('percent').textContent = p;
+  document.getElementById('area').textContent = p + ' cm²';
+
+  const C = 8.854e-12 * (p / 100 * 0.01) / 0.001;
+  document.getElementById('cap').textContent = (C * 1e12).toFixed(2) + ' pF';
+
+  // Slide the gold plate to visually change the overlap.
+  moving.style.left = (8 + (100 - p) * 0.6) + '%';
+}
+slider.addEventListener('input', update);
+update();
+
+const panel = document.getElementById('arPanel');
+const viewer = document.getElementById('capacitorModel');
+const status = document.getElementById('modelStatus');
+
+document.getElementById('openAR').addEventListener('click', () => {
+  panel.style.display = 'block';
+  viewer.dismissPoster?.();
+  viewer.addEventListener('load', () => {
+    status.textContent = '3D model loaded. On a compatible phone, tap “View in your space (AR)”.';
+  }, {once:true});
+  viewer.addEventListener('error', () => {
+    status.textContent = 'Model could not load. Check that capacitive-variable-area.glb is in the repository root and that the deployed file URL opens without a 404.';
+  }, {once:true});
+  viewer.src = './capacitive-variable-area.glb';
+  panel.scrollIntoView({behavior:'smooth',block:'start'});
+});
+
+document.getElementById('closeAR').addEventListener('click', () => {
+  panel.style.display = 'none';
+});
+</script>
+</body>
+</html>
