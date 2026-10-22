@@ -5,8 +5,10 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Capacitive Variable Area Transducer</title>
+
 <script type="module"
 src="https://unpkg.com/@google/model-viewer/dist/model-viewer.min.js"></script>
+
 <style>
 *{box-sizing:border-box}
 body{margin:0;background:#eef5fb;color:#18334b;font-family:Arial,sans-serif}
@@ -29,10 +31,12 @@ input[type=range]{width:100%;accent-color:#1479be}
 .note{color:#486078;line-height:1.6}
 .formula{text-align:center;background:#123b62;color:white;border-radius:10px;padding:18px;font-size:23px}
 #arPanel{display:none}
-model-viewer{width:100%;height:430px;background:#edf6ff;border-radius:12px}
+model-viewer{display:block;width:100%;height:430px;background:#edf6ff;border-radius:12px}
+#modelStatus{overflow-wrap:anywhere}
 footer{text-align:center;color:#587087;padding:22px}
 </style>
 </head>
+
 <body>
 <header>
 <h1>Capacitive Variable Area Transducer</h1>
@@ -42,7 +46,7 @@ footer{text-align:center;color:#587087;padding:22px}
 <main>
 <section class="card">
 <h2>1. Interactive Working Animation</h2>
-<p class="note">Move the slider to change the overlapping area. The separation between the plates stays constant.</p>
+<p class="note">Move the slider to change the overlapping area. The plate separation stays constant.</p>
 
 <div id="diagram">
 <div class="plate" id="fixed"></div>
@@ -63,30 +67,35 @@ footer{text-align:center;color:#587087;padding:22px}
 <section class="card">
 <h2>2. Capacitor Formula</h2>
 <div class="formula">C = ε₀ εᵣ A / d</div>
-<p class="note">As the overlapping area A increases, capacitance increases. These ideal values assume air as the dielectric, a maximum overlap area of 100 cm², and a plate separation of 1 mm.</p>
+<p class="note">As overlap area A increases, capacitance increases. These ideal calculations assume air as the dielectric, maximum area 100 cm² and plate separation 1 mm.</p>
 </section>
 
 <section class="card">
 <h2>3. View in Augmented Reality</h2>
-<p class="note">Open the real 3D model of the variable-area capacitor. On a compatible phone, use the AR button to place it in your surroundings.</p>
+<p class="note">Load the capacitive variable-area model, then use the AR button on a compatible Android phone.</p>
+
 <button id="openAR">Open 3D / AR Model</button>
 
 <div id="arPanel">
 <model-viewer
 id="capacitorModel"
 src="./capacitive-variable-area.glb"
-alt="Capacitive variable area transducer with partially overlapping blue and gold plates"
+alt="Two parallel partially overlapping plates of a capacitive variable area transducer"
 ar
-ar-modes="webxr scene-viewer quick-look"
+ar-modes="scene-viewer"
+ar-placement="floor"
 camera-controls
-auto-rotate
-shadow-intensity="1"
+shadow-intensity="0"
 exposure="1"
 environment-image="neutral"
+interaction-prompt="none"
+loading="eager"
+reveal="auto"
 >
 <button slot="ar-button">View in your space (AR)</button>
 </model-viewer>
-<p id="modelStatus" class="note">Loading the capacitive variable-area model…</p>
+
+<p id="modelStatus" class="note" role="status">Preparing the 3D model…</p>
 <button id="closeAR">Close Model</button>
 </div>
 </section>
@@ -98,7 +107,7 @@ environment-image="neutral"
 2. One plate slides horizontally.<br>
 3. The overlapping area changes with the movement.<br>
 4. Greater overlap produces greater capacitance.<br>
-5. A measuring circuit can convert the capacitance change into a displacement-related electrical signal.
+5. A measuring circuit converts capacitance changes into an electrical signal related to displacement.
 </p>
 </section>
 </main>
@@ -108,35 +117,58 @@ environment-image="neutral"
 <script>
 const slider = document.getElementById('slider');
 const moving = document.getElementById('moving');
+const panel = document.getElementById('arPanel');
+const viewer = document.getElementById('capacitorModel');
+const status = document.getElementById('modelStatus');
 
 function update(){
   const p = Number(slider.value);
+
   document.getElementById('percent').textContent = p;
   document.getElementById('area').textContent = p + ' cm²';
 
+  // C = epsilon0 * A / d. A is in square metres; d is in metres.
   const C = 8.854e-12 * (p / 100 * 0.01) / 0.001;
-  document.getElementById('cap').textContent = (C * 1e12).toFixed(2) + ' pF';
+  document.getElementById('cap').textContent =
+    (C * 1e12).toFixed(2) + ' pF';
 
-  // Slide the gold plate to visually change the overlap.
   moving.style.left = (8 + (100 - p) * 0.6) + '%';
 }
 slider.addEventListener('input', update);
 update();
 
-const panel = document.getElementById('arPanel');
-const viewer = document.getElementById('capacitorModel');
-const status = document.getElementById('modelStatus');
+let loadTimer;
+
+viewer.addEventListener('load', () => {
+  clearTimeout(loadTimer);
+  status.textContent =
+    '3D model loaded. Tap “View in your space (AR)” on a compatible Android phone.';
+});
+
+viewer.addEventListener('error', () => {
+  clearTimeout(loadTimer);
+  status.textContent =
+    'Could not load the GLB model. Check that capacitive-variable-area.glb exists beside index.html and its published URL does not return 404.';
+});
 
 document.getElementById('openAR').addEventListener('click', () => {
   panel.style.display = 'block';
-  viewer.dismissPoster?.();
-  viewer.addEventListener('load', () => {
-    status.textContent = '3D model loaded. On a compatible phone, tap “View in your space (AR)”.';
-  }, {once:true});
-  viewer.addEventListener('error', () => {
-    status.textContent = 'Model could not load. Check that capacitive-variable-area.glb is in the repository root and that the deployed file URL opens without a 404.';
-  }, {once:true});
-  viewer.src = './capacitive-variable-area.glb';
+  status.textContent = 'Loading capacitive-variable-area.glb…';
+
+  // Use the same-origin model path and load it when requested.
+  viewer.src = new URL(
+    './capacitive-variable-area.glb',
+    window.location.href
+  ).href;
+
+  clearTimeout(loadTimer);
+  loadTimer = setTimeout(() => {
+    if (!viewer.loaded) {
+      status.textContent =
+        'The model is taking too long to load. Check the GLB URL and internet connection.';
+    }
+  }, 10000);
+
   panel.scrollIntoView({behavior:'smooth',block:'start'});
 });
 
